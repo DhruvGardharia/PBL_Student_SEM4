@@ -9,6 +9,7 @@ import StudentDashboard from "../src/components/StudentDashboard"
 import Profile from "./pages/Profile";
 import CheckAttendance from "./pages/CheckAttendance";
 import AttendanceResults from "./pages/AttendanceResults";
+import TeacherDashboard from "./components/TeacherDashboard";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -21,10 +22,12 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/student-dashboard" element={<StudentDashboard />} />
           <Route path="/attendance-results/:dateString" element={<AttendanceResults />} />
+          <Route path="/teacher-dashboard" element={<TeacherDashboard/>}/>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/check-attendance" element={<CheckAttendance />} />
+
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
