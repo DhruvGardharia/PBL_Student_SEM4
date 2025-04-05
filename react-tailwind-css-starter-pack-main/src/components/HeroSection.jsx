@@ -300,6 +300,8 @@
 // };
 
 // export default HeroSection;
+
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthButton from './AuthButton';
@@ -315,7 +317,11 @@ const HeroSection = () => {
     // In a real app, you would validate credentials here
     if (activeTab === 'login' && userType === 'student') {
       navigate('/student-dashboard');
-    } else {
+    } 
+    else if(activeTab === 'login' && userType === 'teacher')
+      navigate('/teacher-dashboard');
+
+    else {
       // Handle teacher login or signup flow
       alert("This functionality is still under development");
     }
