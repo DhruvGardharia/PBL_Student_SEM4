@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf'; // Import jsPDF
 
 const TeacherDashboard = () => {
     const [classes, setClasses] = useState([
-        { id: 1, name: 'Mathematics 101', totalStudents: 35, attendanceRate: 82 },
+        { id: 1, name: 'Mathematics 101', totalStudents: 87, attendanceRate: 82 },
         { id: 2, name: 'Physics 202', totalStudents: 28, attendanceRate: 75 },
         { id: 3, name: 'Computer Science 303', totalStudents: 42, attendanceRate: 90 },
         { id: 4, name: 'Chemistry 104', totalStudents: 30, attendanceRate: 68 },
@@ -31,15 +31,6 @@ const TeacherDashboard = () => {
 
     const averageAttendance = Math.round(classes.reduce((sum, cls) => sum + cls.attendanceRate, 0) / classes.length);
 
-    const getStudentsForClass = (classId) => [
-        { id: 1, name: 'Emma Johnson', attendance: 85, lastAttended: '2025-04-01' },
-        { id: 2, name: 'Noah Williams', attendance: 92, lastAttended: '2025-04-02' },
-        { id: 3, name: 'Olivia Brown', attendance: 78, lastAttended: '2025-04-01' },
-        { id: 4, name: 'Liam Jones', attendance: 65, lastAttended: '2025-03-29' },
-        { id: 5, name: 'Sophia Miller', attendance: 88, lastAttended: '2025-04-02' },
-        { id: 6, name: 'Jackson Davis', attendance: 72, lastAttended: '2025-03-30' },
-    ];
-
     const handleViewStudents = (classId) => {
         setSelectedClass(classId);
         setViewMode('students');
@@ -48,8 +39,13 @@ const TeacherDashboard = () => {
     const handleMarkAttendance = (classId) => {
         setSelectedClass(classId);
         setViewMode('attendance');
-        const students = getStudentsForClass(classId);
-        setAttendanceData(students.map(student => ({ studentId: student.id, name: student.name, present: false }))); // Initialize all as absent
+        const startRoll = 23201;
+        const endRoll = 23287;
+        const students = Array.from({ length: endRoll - startRoll + 1 }, (_, i) => {
+            const rollNumber = startRoll + i;
+            return { studentId: rollNumber, name: rollNumber.toString().padStart(5, '0'), present: false };
+        });
+        setAttendanceData(students);
         setClassImage(null);
         setPreviewImage(null);
         setAttendanceTime(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
@@ -165,12 +161,8 @@ const TeacherDashboard = () => {
                 setExtractedRollNumbers(extractedRollsFormatted);
 
                 const updatedAttendance = attendanceData.map((student) => {
-                    const roll = student.studentId.toString().padStart(3, '0');
-                    const fullRoll = `232${roll.slice(-2)}`;
-                    const fullRollPadded = fullRoll.padStart(5, '0');
-                    const shortRollPadded = roll.slice(-2).padStart(2, '0');
-                    const isAbsent = extractedRollsFormatted.includes(fullRollPadded) || extractedRollsFormatted.some(extracted => extracted.endsWith(shortRollPadded));
-                    return { ...student, present: !isAbsent }; // Mark extracted as absent
+                    const rollNumber = student.studentId.toString().padStart(5, '0');
+                    return { ...student, present: !extractedRollsFormatted.includes(rollNumber) }; // Mark extracted as absent
                 });
                 setAttendanceData(updatedAttendance);
                 generateRollNumberPdf(extractedRollsFormatted);
@@ -345,7 +337,6 @@ const TeacherDashboard = () => {
     );
 
     const renderStudentsView = () => {
-        const students = getStudentsForClass(selectedClass);
         const currentClass = classes.find(c => c.id === selectedClass);
         return (
             <div className="p-8">
@@ -362,27 +353,9 @@ const TeacherDashboard = () => {
                     </button>
                 </div>
                 <div className="bg-white shadow-md rounded-lg overflow-hidden">
-                    <table className="min-w-full leading-normal">
-                        <thead>
-                            <tr className="bg-gray-100 text-gray-600 uppercase text-sm font-semibold">
-                                <th className="py-3 px-6 text-left">Name</th>
-                                <th className="py-3 px-6 text-left">Attendance %</th>
-                                <th className="py-3 px-6 text-left">Last Attended</th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-gray-600 text-sm">
-                            {students.map(student => (
-                                <tr key={student.id} className="border-b border-gray-200">
-                                    <td className="py-3 px-6 text-left whitespace-nowrap">{student.name}</td>
-                                    <td className="py-3 px-6 text-left whitespace-nowrap">{student.attendance}%</td>
-                                    <td className="py-3 px-6 text-left whitespace-nowrap">{student.lastAttended}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    {students.length === 0 && (
-                        <div className="p-6 text-center text-gray-500">No students in this class yet.</div>
-                    )}
+                    <div className="p-6 text-center text-gray-500">
+                        Student list functionality can be added here.
+                    </div>
                 </div>
             </div>
         );
@@ -504,7 +477,7 @@ const TeacherDashboard = () => {
                         <table className="min-w-full leading-normal">
                             <thead>
                                 <tr className="bg-gray-100 text-gray-600 uppercase text-sm font-semibold">
-                                    <th className="py-3 px-6 text-left">Name</th>
+                                    <th className="py-3 px-6 text-left">Roll Number</th>
                                     <th className="py-3 px-6 text-center">Present</th>
                                 </tr>
                             </thead>
