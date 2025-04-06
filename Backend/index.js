@@ -64,12 +64,15 @@ const corsOptions = {
   origin: 'http://localhost:3000', // Allow only your frontend origin
   methods: 'POST, OPTIONS', // Specify the allowed HTTP methods for this route
   allowedHeaders: 'Content-Type', // Specify the allowed headers
+  credentials: true, // Allow credentials (cookies, authorization headers, etc.)
 };
 app.use(cors(corsOptions));
 app.use(express.json());
 
 // Serve uploaded files (e.g. attendance images)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Health check route
 app.get("/api/ping", (req, res) => {
     res.json({ message: "pong" });
   });
