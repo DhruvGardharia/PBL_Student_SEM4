@@ -14,13 +14,19 @@ const TeacherDashboard = () => {
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
     const [attendanceTime, setAttendanceTime] = useState(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
     const [attendanceData, setAttendanceData] = useState([]);
-    const [classImage, setClassImage] = useState(null);
-    const [previewImage, setPreviewImage] = useState(null);
+    const [ocrImage, setOcrImage] = useState(null);
+    const [previewOcrImage, setPreviewOcrImage] = useState(null);
+    const [headCountImage, setHeadCountImage] = useState(null);
+    const [previewHeadCountImage, setPreviewHeadCountImage] = useState(null);
     const [extractedRollNumbers, setExtractedRollNumbers] = useState([]);
     const [audioFile, setAudioFile] = useState(null);
     const [transcriptionText, setTranscriptionText] = useState('');
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [transcriptionError, setTranscriptionError] = useState(null);
+    const [headCount, setHeadCount] = useState(null);
+    const [headCountError, setHeadCountError] = useState('');
+    const [isCountingHeads, setIsCountingHeads] = useState(false);
+    const [processedHeadCountImage, setProcessedHeadCountImage] = useState(null); // State to hold the processed image
 
     useEffect(() => {
         fetch("http://localhost:4000/api/ping")
@@ -46,14 +52,20 @@ const TeacherDashboard = () => {
             return { studentId: rollNumber, name: rollNumber.toString().padStart(5, '0'), present: false };
         });
         setAttendanceData(students);
-        setClassImage(null);
-        setPreviewImage(null);
+        setOcrImage(null);
+        setPreviewOcrImage(null);
+        setHeadCountImage(null);
+        setPreviewHeadCountImage(null);
         setAttendanceTime(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
         setExtractedRollNumbers([]);
         setAudioFile(null);
         setTranscriptionText('');
         setIsTranscribing(false);
         setTranscriptionError(null);
+        setHeadCount(null);
+        setHeadCountError('');
+        setIsCountingHeads(false);
+        setProcessedHeadCountImage(null); // Reset processed image
     };
 
     const handleGoBack = () => {
@@ -64,6 +76,10 @@ const TeacherDashboard = () => {
         setTranscriptionText('');
         setIsTranscribing(false);
         setTranscriptionError(null);
+        setHeadCount(null);
+        setHeadCountError('');
+        setIsCountingHeads(false);
+        setProcessedHeadCountImage(null); // Reset processed image
     };
 
     const toggleAttendance = (studentId) => {
@@ -74,19 +90,40 @@ const TeacherDashboard = () => {
         );
     };
 
-    const handleImageUpload = (e) => {
+    const handleOcrImageUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setClassImage(file);
+            setOcrImage(file);
             const reader = new FileReader();
-            reader.onloadend = () => setPreviewImage(reader.result);
+            reader.onloadend = () => setPreviewOcrImage(reader.result);
             reader.readAsDataURL(file);
         }
     };
 
-    const removeImage = () => {
-        setClassImage(null);
-        setPreviewImage(null);
+    const removeOcrImage = () => {
+        setOcrImage(null);
+        setPreviewOcrImage(null);
+    };
+
+    const handleHeadCountImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setHeadCountImage(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setPreviewHeadCountImage(reader.result);
+            reader.readAsDataURL(file);
+            setHeadCount(null); // Reset head count when a new image is uploaded
+            setHeadCountError('');
+            setProcessedHeadCountImage(null); // Reset processed image
+        }
+    };
+
+    const removeHeadCountImage = () => {
+        setHeadCountImage(null);
+        setPreviewHeadCountImage(null);
+        setHeadCount(null);
+        setHeadCountError('');
+        setProcessedHeadCountImage(null); // Reset processed image
     };
 
     const generateRollNumberPdf = (extractedRolls) => {
@@ -137,8 +174,8 @@ const TeacherDashboard = () => {
     };
 
     const extractRollNumbersFromImage = async () => {
-        if (!classImage) {
-            alert('Please upload an image first.');
+        if (!ocrImage) {
+            alert('Please upload an image for roll number extraction.');
             return;
         }
         if (!selectedClass) {
@@ -147,7 +184,7 @@ const TeacherDashboard = () => {
         }
 
         const formData = new FormData();
-        formData.append('image', classImage);
+        formData.append('image', ocrImage);
 
         try {
             const response = await fetch('http://localhost:4000/api/ocr/image', {
@@ -297,6 +334,44 @@ const TeacherDashboard = () => {
         setViewMode('dashboard');
     };
 
+    const countHeads = async () => {
+        if (!headCountImage) {
+            setHeadCountError('Please upload an image for head counting.');
+            return;
+        }
+
+        setIsCountingHeads(true);
+        setHeadCountError('');
+        setHeadCount(null);
+        setProcessedHeadCountImage(null); // Clear previous processed image
+
+        const formData = new FormData();
+        formData.append('image', headCountImage);
+
+        try {
+            const response = await fetch('http://localhost:4000/api/headcount', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setHeadCount(data.headCount);
+                if (data.outputImage) {
+                    setProcessedHeadCountImage(`data:image/jpeg;base64,${data.outputImage}`);
+                }
+            } else {
+                const errorMessage = await response.text();
+                setHeadCountError(`Error counting heads: ${errorMessage}`);
+            }
+        } catch (error) {
+            console.error('Error counting heads:', error);
+            setHeadCountError('An error occurred while counting heads.');
+        } finally {
+            setIsCountingHeads(false);
+        }
+    };
+
     const renderDashboard = () => (
         <div className="p-8">
             <h2 className="text-3xl font-semibold text-gray-800 mb-8">Welcome, Teacher!</h2>
@@ -396,21 +471,21 @@ const TeacherDashboard = () => {
                             />
                         </div>
                         <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Upload Attendance Image</label>
+                            <label className="block text-gray-700 text-sm font-bold mb-2">Upload Image for Roll Number Extraction</label>
                             <input
                                 type="file"
                                 accept="image/*"
-                                onChange={handleImageUpload}
+                                onChange={handleOcrImageUpload}
                                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                             />
-                            {previewImage && (
+                            {previewOcrImage && (
                                 <div className="mt-4">
-                                    <img src={previewImage} alt="Uploaded preview" className="h-48 object-contain rounded shadow-sm" />
+                                    <img src={previewOcrImage} alt="OCR Preview" className="h-48 object-contain rounded shadow-sm" />
                                     <button
-                                        onClick={removeImage}
+                                        onClick={removeOcrImage}
                                         className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                                     >
-                                        Remove Image
+                                        Remove OCR Image
                                     </button>
                                 </div>
                             )}
@@ -420,6 +495,40 @@ const TeacherDashboard = () => {
                             >
                                 Extract Roll Numbers
                             </button>
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 text-sm font-bold mb-2">Upload Image for Head Counting</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleHeadCountImageUpload}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            />
+                            {previewHeadCountImage && (
+                                <div className="mt-4">
+                                    <img src={previewHeadCountImage} alt="Head Count Preview" className="h-48 object-contain rounded shadow-sm" />
+                                    <button
+                                        onClick={removeHeadCountImage}
+                                        className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                                    >
+                                        Remove Head Count Image
+                                    </button>
+                                </div>
+                            )}
+                            <button
+                                onClick={countHeads}
+                                className="mt-3 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline"
+                                disabled={isCountingHeads || !headCountImage}
+                            >
+                                {isCountingHeads ? 'Counting Heads...' : 'Count Heads'}
+                            </button>
+                            {headCount !== null && <p className="mt-2 text-green-500">Number of heads detected: {headCount}</p>}
+                            {headCountError && <p className="mt-2 text-red-500">{headCountError}</p>}
+                            {processedHeadCountImage && (
+                                <div className="mt-4">
+                                    <img src={processedHeadCountImage} alt="Processed Head Count" className="h-48 object-contain rounded shadow-sm" />
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label className="block text-gray-700 text-sm font-bold mb-2">Upload Audio for Transcription</label>
