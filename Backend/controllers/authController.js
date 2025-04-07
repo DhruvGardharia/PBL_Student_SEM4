@@ -6,24 +6,29 @@ const JWT_SECRET = "your_secret_key"; // Replace with env variable in production
 
 // Register Teacher
 exports.registerTeacher = async (req, res) => {
-    console.log("Incoming request body:", req.body); 
-  const { name, email, password, subjects } = req.body;
-
-  try {
-    const existingTeacher = await Teacher.findOne({ email });
-    if (existingTeacher) return res.status(400).json({ message: "Email already in use" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const teacher = new Teacher({ name, email, password: hashedPassword, subjects });
-    await teacher.save();
-
-    res.status(201).json({ message: "Teacher registered successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Error registering teacher", error });
-  }
-};
-
+    console.log("Incoming request body:", req.body);
+    let { name, email, password, subjects } = req.body;
+  
+    try {
+      const existingTeacher = await Teacher.findOne({ email });
+      if (existingTeacher) return res.status(400).json({ message: "Email already in use" });
+  
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      // Convert comma-separated string to array (if it's a string)
+      if (typeof subjects === 'string') {
+        subjects = subjects.split(',').map(sub => sub.trim());
+      }
+  
+      const teacher = new Teacher({ name, email, password: hashedPassword, subjects });
+      await teacher.save();
+  
+      res.status(201).json({ message: "Teacher registered successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Error registering teacher", error });
+    }
+  };
+  
 
 
 exports.loginTeacher = async (req, res) => {
