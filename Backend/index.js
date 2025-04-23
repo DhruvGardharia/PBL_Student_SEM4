@@ -59,6 +59,7 @@ const studentAuthRoutes = require("./routes/studentAuthRoutes");
 const ocrRoutes = require("./routes/ocrRoute");
 const geminiTranscribeRoute = require("./routes/geminiTranscribeRoute");
 const attendenceRoute = require("./routes/attendenceRoute");
+const headCountRoute = require("./routes/headCountRoute");
 // Connect to MongoDB
 require("./config/database").connect();
 
@@ -88,6 +89,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/student", studentAuthRoutes);
 app.use("/api/ocr", ocrRoutes);
 app.use("/api", geminiTranscribeRoute);
+app.use("/api", headCountRoute);
 // app.use("/api/attendance", attendenceRoute); // Attendance routes
 
 
