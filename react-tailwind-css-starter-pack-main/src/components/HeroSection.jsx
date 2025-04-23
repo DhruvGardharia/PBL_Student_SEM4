@@ -410,6 +410,8 @@ const HeroSection = () => {
         });
 
         localStorage.setItem('token', response.data.token);
+        document.cookie = `token=${response.data.token}; path=/; max-age=3600;`;
+
         if (userType === 'student') navigate('/student-dashboard');
         else navigate('/teacher-dashboard');
 

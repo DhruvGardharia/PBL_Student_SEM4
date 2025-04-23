@@ -14,7 +14,6 @@ router.get("/ping", (req, res) => {
   res.send("OCR route is working");
 });
 
-// Multer storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) =>
