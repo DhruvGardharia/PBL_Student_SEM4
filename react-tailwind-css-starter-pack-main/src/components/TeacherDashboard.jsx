@@ -1,640 +1,246 @@
 import React, { useState, useEffect } from 'react';
-import { jsPDF } from 'jspdf'; // Import jsPDF
+import { Routes, Route, useNavigate } from 'react-router-dom';
+import AttendancePage from './AttendancePage';
+import RecentActivity from './RecentActivities';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-const TeacherDashboard = () => {
-    const [classes, setClasses] = useState([
-        { id: 1, name: 'Mathematics 101', totalStudents: 87, attendanceRate: 82 },
-        { id: 2, name: 'Physics 202', totalStudents: 28, attendanceRate: 75 },
-        { id: 3, name: 'Computer Science 303', totalStudents: 42, attendanceRate: 90 },
-        { id: 4, name: 'Chemistry 104', totalStudents: 30, attendanceRate: 68 },
-    ]);
+const AttendanceGraph = ({ data, title, dataKey, color }) => (
+    <div className="bg-white rounded-lg shadow-md p-4">
+        <h4 className="text-md font-semibold text-gray-800 mb-2">{title}</h4>
+        <BarChart width={300} height={200} data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis tickFormatter={(value) => `${value}%`} domain={[0, 100]} />
+            <Tooltip formatter={(value) => `${value}%`} />
+            <Legend />
+            <Bar dataKey={dataKey} fill={color} name="Percentage" />
+        </BarChart>
+    </div>
+);
 
-    const [selectedClass, setSelectedClass] = useState(null);
-    const [viewMode, setViewMode] = useState('dashboard');
-    const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
-    const [attendanceTime, setAttendanceTime] = useState(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
-    const [attendanceData, setAttendanceData] = useState([]);
-    const [ocrImage, setOcrImage] = useState(null);
-    const [previewOcrImage, setPreviewOcrImage] = useState(null);
-    const [headCountImage, setHeadCountImage] = useState(null);
-    const [previewHeadCountImage, setPreviewHeadCountImage] = useState(null);
-    const [extractedRollNumbers, setExtractedRollNumbers] = useState([]);
-    const [audioFile, setAudioFile] = useState(null);
-    const [transcriptionText, setTranscriptionText] = useState('');
-    const [isTranscribing, setIsTranscribing] = useState(false);
-    const [transcriptionError, setTranscriptionError] = useState(null);
-    const [headCount, setHeadCount] = useState(null);
-    const [headCountError, setHeadCountError] = useState('');
-    const [isCountingHeads, setIsCountingHeads] = useState(false);
-    const [processedHeadCountImage, setProcessedHeadCountImage] = useState(null); // State to hold the processed image
+const Schedule = () => {
+    const [activeSubject, setActiveSubject] = useState('DBMS');
 
-    useEffect(() => {
-        fetch("http://localhost:4000/api/ping")
-            .then(res => res.json())
-            .then(data => console.log("Backend says:", data))
-            .catch(err => console.error("Backend error:", err));
-    }, []);
+    const DBMSSchedule = [
+        { day: 'Mon', time: '10:00 AM - 11:00 AM' },
+        { day: 'Tue', time: '11:15 AM - 12:15 PM' },
+        { day: 'Wed', time: '10:00 AM - 11:00 AM' },
+        { day: 'Thu', time: '11:15 AM - 12:15 PM' },
+        { day: 'Fri', time: '09:00 AM - 10:00 AM' },
+    ];
 
-    const averageAttendance = Math.round(classes.reduce((sum, cls) => sum + cls.attendanceRate, 0) / classes.length);
+    const OOPSchedule = [
+        { day: 'Mon', time: '01:00 PM - 02:00 PM' },
+        { day: 'Wed', time: '01:00 PM - 02:00 PM' },
+        { day: 'Thu', time: '02:15 PM - 03:15 PM' },
+        { day: 'Fri', time: '10:15 AM - 11:15 AM' },
+    ];
 
-    const handleViewStudents = (classId) => {
-        setSelectedClass(classId);
-        setViewMode('students');
-    };
+    const currentSchedule = activeSubject === 'DBMS' ? DBMSSchedule : OOPSchedule;
+    const subjects = ['DBMS', 'OOP'];
 
-    const handleMarkAttendance = (classId) => {
-        setSelectedClass(classId);
-        setViewMode('attendance');
-        const startRoll = 23201;
-        const endRoll = 23287;
-        const students = Array.from({ length: endRoll - startRoll + 1 }, (_, i) => {
-            const rollNumber = startRoll + i;
-            return { studentId: rollNumber, name: rollNumber.toString().padStart(5, '0'), present: false };
-        });
-        setAttendanceData(students);
-        setOcrImage(null);
-        setPreviewOcrImage(null);
-        setHeadCountImage(null);
-        setPreviewHeadCountImage(null);
-        setAttendanceTime(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
-        setExtractedRollNumbers([]);
-        setAudioFile(null);
-        setTranscriptionText('');
-        setIsTranscribing(false);
-        setTranscriptionError(null);
-        setHeadCount(null);
-        setHeadCountError('');
-        setIsCountingHeads(false);
-        setProcessedHeadCountImage(null); // Reset processed image
-    };
-
-    const handleGoBack = () => {
-        setViewMode('dashboard');
-        setSelectedClass(null);
-        setExtractedRollNumbers([]);
-        setAudioFile(null);
-        setTranscriptionText('');
-        setIsTranscribing(false);
-        setTranscriptionError(null);
-        setHeadCount(null);
-        setHeadCountError('');
-        setIsCountingHeads(false);
-        setProcessedHeadCountImage(null); // Reset processed image
-    };
-
-    const toggleAttendance = (studentId) => {
-        setAttendanceData(
-            attendanceData.map(item =>
-                item.studentId === studentId ? { ...item, present: !item.present } : item
-            )
-        );
-    };
-
-    const handleOcrImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setOcrImage(file);
-            const reader = new FileReader();
-            reader.onloadend = () => setPreviewOcrImage(reader.result);
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const removeOcrImage = () => {
-        setOcrImage(null);
-        setPreviewOcrImage(null);
-    };
-
-    const handleHeadCountImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setHeadCountImage(file);
-            const reader = new FileReader();
-            reader.onloadend = () => setPreviewHeadCountImage(reader.result);
-            reader.readAsDataURL(file);
-            setHeadCount(null); // Reset head count when a new image is uploaded
-            setHeadCountError('');
-            setProcessedHeadCountImage(null); // Reset processed image
-        }
-    };
-
-    const removeHeadCountImage = () => {
-        setHeadCountImage(null);
-        setPreviewHeadCountImage(null);
-        setHeadCount(null);
-        setHeadCountError('');
-        setProcessedHeadCountImage(null); // Reset processed image
-    };
-
-    const generateRollNumberPdf = (extractedRolls) => {
-        if (!selectedClass) {
-            alert('Please select a class first to generate the roll number analysis PDF.');
-            return;
-        }
-        const pdf = new jsPDF();
-        pdf.setFontSize(12);
-        const margin = 10;
-        let yPosition = margin;
-        const lineHeight = 5;
-
-        const currentClass = classes.find(c => c.id === selectedClass);
-        const className = currentClass ? currentClass.name : 'Unknown Class';
-
-        const expectedRolls = Array.from({ length: 87 }, (_, i) => 23201 + i).map(num => num.toString().padStart(5, '0'));
-        const absentRolls = extractedRolls.map(roll => roll.toString().padStart(5, '0'));
-        const presentRolls = expectedRolls.filter(roll => !absentRolls.includes(roll));
-
-        pdf.text(`Roll Number Analysis for ${className}`, margin, yPosition);
-        yPosition += 2 * lineHeight;
-
-        pdf.text('Absent Roll Numbers (Detected in Image):', margin, yPosition);
-        yPosition += lineHeight;
-        absentRolls.forEach(roll => {
-            if (yPosition + lineHeight + margin > pdf.internal.pageSize.getHeight()) {
-                pdf.addPage();
-                yPosition = margin;
-            }
-            pdf.text(`- ${roll}`, margin + 10, yPosition);
-            yPosition += lineHeight;
-        });
-
-        yPosition += lineHeight;
-        pdf.text('Present Roll Numbers (Not Detected in Image):', margin, yPosition);
-        yPosition += lineHeight;
-        presentRolls.forEach(roll => {
-            if (yPosition + lineHeight + margin > pdf.internal.pageSize.getHeight()) {
-                pdf.addPage();
-                yPosition = margin;
-            }
-            pdf.text(`- ${roll}`, margin + 10, yPosition);
-            yPosition += lineHeight;
-        });
-
-        pdf.save(`roll_number_analysis_${className.replace(/\s+/g, '_')}.pdf`);
-    };
-
-    const extractRollNumbersFromImage = async () => {
-        if (!ocrImage) {
-            alert('Please upload an image for roll number extraction.');
-            return;
-        }
-        if (!selectedClass) {
-            alert('Please select a class first to extract roll numbers.');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('image', ocrImage);
-
-        try {
-            const response = await fetch('http://localhost:4000/api/ocr/image', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await response.json();
-            if (response.ok && data && data.rollNos) {
-                const extractedRollsFormatted = data.rollNos.map(roll => roll.toString().padStart(5, '0'));
-                setExtractedRollNumbers(extractedRollsFormatted);
-
-                const updatedAttendance = attendanceData.map((student) => {
-                    const rollNumber = student.studentId.toString().padStart(5, '0');
-                    return { ...student, present: !extractedRollsFormatted.includes(rollNumber) }; // Mark extracted as absent
-                });
-                setAttendanceData(updatedAttendance);
-                generateRollNumberPdf(extractedRollsFormatted);
-            } else {
-                alert('No roll numbers found or an error occurred.');
-                setExtractedRollNumbers([]);
-            }
-        } catch (error) {
-            console.error('There was an error:', error);
-            alert('An error occurred while communicating with the server.');
-            setExtractedRollNumbers([]);
-        }
-    };
-
-    const handleAudioUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setAudioFile(file);
-        }
-    };
-
-    const transcribeAudio = async () => {
-        if (!audioFile) {
-            alert('Please upload an audio file first.');
-            return;
-        }
-
-        setIsTranscribing(true);
-        setTranscriptionError(null);
-        setTranscriptionText('');
-
-        const formData = new FormData();
-        formData.append('audio', audioFile);
-
-        try {
-            const response = await fetch('http://localhost:4000/api/gemini-transcribe', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await response.json();
-            if (response.ok && data && data.transcript) {
-                setTranscriptionText(data.transcript);
-                const transcribedText = data.transcript.toLowerCase();
-                const updatedAttendance = attendanceData.map(student => {
-                    const studentNameLower = student.name.toLowerCase();
-                    if (studentNameLower.split(' ').some(part => transcribedText.includes(part))) {
-                        return { ...student, present: true };
-                    }
-                    return student;
-                });
-                setAttendanceData(updatedAttendance);
-            } else {
-                setTranscriptionError('Transcription failed or no text found.');
-                setTranscriptionText('');
-            }
-        } catch (error) {
-            console.error('Error transcribing audio:', error);
-            setTranscriptionError('An error occurred during audio transcription.');
-            setTranscriptionText('');
-        } finally {
-            setIsTranscribing(false);
-        }
-    };
-
-    const downloadTranscriptionAsPdf = () => {
-        const pdf = new jsPDF();
-        const text = transcriptionText;
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 10;
-        const textWidth = pageWidth - 2 * margin;
-        const lineHeight = 5;
-
-        pdf.setFontSize(12);
-
-        const splitText = pdf.splitTextToSize(text, textWidth);
-        let yPosition = margin;
-
-        splitText.forEach(line => {
-            const lineSize = pdf.getTextDimensions(line, { fontSize: 12 }).h;
-
-            if (yPosition + lineSize + margin > pageHeight) {
-                pdf.addPage();
-                yPosition = margin;
-            }
-            pdf.text(line, margin, yPosition);
-            yPosition += lineHeight;
-        });
-
-        pdf.save('transcription.pdf');
-    };
-
-    const downloadAttendancePdf = () => {
-        if (!selectedClass) {
-            alert('Please select a class first to download attendance.');
-            return;
-        }
-        const pdf = new jsPDF();
-        pdf.setFontSize(12);
-        const margin = 10;
-        let yPosition = margin;
-        const lineHeight = 5;
-
-        const currentClass = classes.find(c => c.id === selectedClass);
-        const className = currentClass ? currentClass.name : 'Unknown Class';
-        const formattedDate = new Date(attendanceDate).toLocaleDateString();
-
-        pdf.text(`Attendance for ${className}`, margin, yPosition);
-        yPosition += 2 * lineHeight;
-        pdf.text(`Date: ${formattedDate}`, margin, yPosition);
-        yPosition += 2 * lineHeight;
-
-        pdf.text('Student Attendance:', margin, yPosition);
-        yPosition += lineHeight;
-
-        attendanceData.forEach(student => {
-            if (yPosition + lineHeight + margin > pdf.internal.pageSize.getHeight()) {
-                pdf.addPage();
-                yPosition = margin;
-            }
-            pdf.text(`- ${student.name}: ${student.present ? 'Present' : 'Absent'}`, margin + 10, yPosition);
-            yPosition += lineHeight;
-        });
-
-        pdf.save(`attendance_${className.replace(/\s+/g, '_')}_${attendanceDate}.pdf`);
-    };
-
-    const saveAttendance = () => {
-        const currentClass = classes.find(c => c.id === selectedClass);
-        alert(`Attendance saved for ${currentClass.name} on ${attendanceDate} at ${attendanceTime}`);
-        setViewMode('dashboard');
-    };
-
-    const countHeads = async () => {
-        if (!headCountImage) {
-            setHeadCountError('Please upload an image for head counting.');
-            return;
-        }
-
-        setIsCountingHeads(true);
-        setHeadCountError('');
-        setHeadCount(null);
-        setProcessedHeadCountImage(null); // Clear previous processed image
-
-        const formData = new FormData();
-        formData.append('image', headCountImage);
-
-        try {
-            const response = await fetch('http://localhost:4000/api/headcount', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setHeadCount(data.headCount);
-                if (data.outputImage) {
-                    setProcessedHeadCountImage(`data:image/jpeg;base64,${data.outputImage}`);
-                }
-            } else {
-                const errorMessage = await response.text();
-                setHeadCountError(`Error counting heads: ${errorMessage}`);
-            }
-        } catch (error) {
-            console.error('Error counting heads:', error);
-            setHeadCountError('An error occurred while counting heads.');
-        } finally {
-            setIsCountingHeads(false);
-        }
-    };
-
-    const renderDashboard = () => (
-        <div className="p-8">
-            <h2 className="text-3xl font-semibold text-gray-800 mb-8">Welcome, Teacher!</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {classes.map(cls => (
-                    <div key={cls.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition duration-300">
-                        <div className="p-6">
-                            <h3 className="text-xl font-semibold text-indigo-600 mb-2">{cls.name}</h3>
-                            <p className="text-gray-700 mb-1">
-                                <span className="font-semibold">Students:</span> {cls.totalStudents}
-                            </p>
-                            <p className="text-gray-700">
-                                <span className="font-semibold">Attendance:</span> {cls.attendanceRate}%
-                            </p>
-                            <div className="mt-4 flex justify-end space-x-2">
-                                <button
-                                    onClick={() => handleViewStudents(cls.id)}
-                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                >
-                                    View
-                                </button>
-                                <button
-                                    onClick={() => handleMarkAttendance(cls.id)}
-                                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                >
-                                    Attendance
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+    return (
+        <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Next Week's Schedule</h3>
+            <div className="flex space-x-2 mb-4">
+                {subjects.map(subject => (
+                    <button
+                        key={subject}
+                        onClick={() => setActiveSubject(subject)}
+                        className={`px-3 py-2 rounded-md text-sm font-medium ${
+                            activeSubject === subject ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                    >
+                        {subject}
+                    </button>
                 ))}
             </div>
-            <div className="mt-8 p-6 bg-white rounded-lg shadow-md">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">Overall Average Attendance</h3>
-                <div className="text-4xl font-bold text-purple-600">{averageAttendance}%</div>
-            </div>
+            <ul>
+                {currentSchedule.map((item, index) => (
+                    <li key={index} className="py-2">
+                        <span className="font-semibold">{item.day}:</span> {item.time}
+                    </li>
+                ))}
+                {currentSchedule.length === 0 && <p className="text-gray-500">No lectures scheduled for next week.</p>}
+            </ul>
         </div>
     );
+};
 
-    const renderStudentsView = () => {
-        const currentClass = classes.find(c => c.id === selectedClass);
-        return (
-            <div className="p-8">
-                <div className="flex justify-between items-center mb-8">
-                    <div>
-                        <h2 className="text-3xl font-semibold text-gray-800">{currentClass?.name} - Students</h2>
-                        <p className="text-gray-600">View and manage students in this class.</p>
-                    </div>
-                    <button
-                        onClick={handleGoBack}
-                        className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline"
-                    >
-                        Back to Dashboard
-                    </button>
-                </div>
-                <div className="bg-white shadow-md rounded-lg overflow-hidden">
-                    <div className="p-6 text-center text-gray-500">
-                        Student list functionality can be added here.
-                    </div>
-                </div>
-            </div>
-        );
-    };
+const TeacherDashboard = () => {
+    const [classes, setClasses] = useState([]);
+    const [teacherName, setTeacherName] = useState('');
+    const [activeStatTab, setActiveStatTab] = useState('week');
+    const navigate = useNavigate();
 
-    const renderAttendanceView = () => {
-        const currentClass = classes.find(c => c.id === selectedClass);
-        return (
-            <div className="p-8">
-                <div className="flex justify-between items-center mb-8">
-                    <div>
-                        <h2 className="text-3xl font-semibold text-gray-800">{currentClass?.name} - Mark Attendance</h2>
-                        <p className="text-gray-600">Record attendance for today's class.</p>
-                    </div>
-                    <button
-                        onClick={handleGoBack}
-                        className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline"
-                    >
-                        Back to Dashboard
-                    </button>
-                </div>
-                <div className="bg-white rounded-lg shadow-md p-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Date</label>
-                            <input
-                                type="date"
-                                value={attendanceDate}
-                                onChange={(e) => setAttendanceDate(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                            />
-                            <label className="block text-gray-700 text-sm font-bold mt-4 mb-2">Time</label>
-                            <input
-                                type="time"
-                                value={attendanceTime}
-                                onChange={(e) => setAttendanceTime(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Upload Image for Roll Number Extraction</label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleOcrImageUpload}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                            />
-                            {previewOcrImage && (
-                                <div className="mt-4">
-                                    <img src={previewOcrImage} alt="OCR Preview" className="h-48 object-contain rounded shadow-sm" />
-                                    <button
-                                        onClick={removeOcrImage}
-                                        className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                    >
-                                        Remove OCR Image
-                                    </button>
-                                </div>
-                            )}
-                            <button
-                                onClick={extractRollNumbersFromImage}
-                                className="mt-6 bg-purple-500 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline"
-                            >
-                                Extract Roll Numbers
-                            </button>
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Upload Image for Head Counting</label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleHeadCountImageUpload}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                            />
-                            {previewHeadCountImage && (
-                                <div className="mt-4">
-                                    <img src={previewHeadCountImage} alt="Head Count Preview" className="h-48 object-contain rounded shadow-sm" />
-                                    <button
-                                        onClick={removeHeadCountImage}
-                                        className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                    >
-                                        Remove Head Count Image
-                                    </button>
-                                </div>
-                            )}
-                            <button
-                                onClick={countHeads}
-                                className="mt-3 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline"
-                                disabled={isCountingHeads || !headCountImage}
-                            >
-                                {isCountingHeads ? 'Counting Heads...' : 'Count Heads'}
-                            </button>
-                            {headCount !== null && <p className="mt-2 text-green-500">Number of heads detected: {headCount}</p>}
-                            {headCountError && <p className="mt-2 text-red-500">{headCountError}</p>}
-                            {processedHeadCountImage && (
-                                <div className="mt-4">
-                                    <img src={processedHeadCountImage} alt="Processed Head Count" className="h-48 object-contain rounded shadow-sm" />
-                                </div>
-                            )}
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Upload Audio for Transcription</label>
-                            <input
-                                type="file"
-                                accept="audio/*"
-                                onChange={handleAudioUpload}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                            />
-                            <button
-                                onClick={transcribeAudio}
-                                className="mt-3 bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline"
-                                disabled={isTranscribing || !audioFile}
-                            >
-                                {isTranscribing ? 'Transcribing...' : 'Transcribe Audio'}
-                            </button>
-                            {transcriptionError && <p className="mt-2 text-red-500">{transcriptionError}</p>}
-                            {transcriptionText && (
-                                <div className="mt-4">
-                                    <label className="block text-gray-700 text-sm font-bold mb-2">Transcription:</label>
-                                    <textarea
-                                        value={transcriptionText}
-                                        readOnly
-                                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-48"
-                                    />
-                                    <button
-                                        onClick={downloadTranscriptionAsPdf}
-                                        className="mt-3 bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline"
-                                    >
-                                        Download Transcription as PDF
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+    const weeklyData = [
+        { name: 'Mon', presentPercentage: 80 },
+        { name: 'Tue', presentPercentage: 88 },
+        { name: 'Wed', presentPercentage: 92 },
+        { name: 'Thu', presentPercentage: 85 },
+        { name: 'Fri', presentPercentage: 90 },
+    ];
 
-                    {extractedRollNumbers.length > 0 && (
-                        <div className="mt-8 p-4 bg-gray-100 rounded-md">
-                            <h3 className="font-semibold text-lg text-gray-800 mb-2">Extracted Roll Numbers:</h3>
-                            <ul className="list-disc ml-6">
-                                {extractedRollNumbers.map((roll, idx) => (
-                                    <li key={idx} className="text-gray-700">{roll}</li>
-                                ))}
-                                <button
-                                    onClick={() => generateRollNumberPdf(extractedRollNumbers)}
-                                    className="mt-3 bg-purple-600 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                >
-                                    Download Roll Number Analysis PDF
-                                </button>
-                            </ul>
-                        </div>
-                    )}
+    const monthlyData = [
+        { name: 'Week 1', presentPercentage: 82 },
+        { name: 'Week 2', presentPercentage: 89 },
+        { name: 'Week 3', presentPercentage: 91 },
+        { name: 'Week 4', presentPercentage: 87 },
+    ];
 
-                    <div className="mt-8 bg-white shadow-md rounded-lg overflow-hidden">
-                        <table className="min-w-full leading-normal">
-                            <thead>
-                                <tr className="bg-gray-100 text-gray-600 uppercase text-sm font-semibold">
-                                    <th className="py-3 px-6 text-left">Roll Number</th>
-                                    <th className="py-3 px-6 text-center">Present</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-gray-600 text-sm">
-                                {attendanceData.map(student => (
-                                    <tr key={student.studentId} className="border-b border-gray-200">
-                                        <td className="py-3 px-6 text-left whitespace-nowrap">{student.name}</td>
-                                        <td className="py-3 px-6 text-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={student.present}
-                                                onChange={() => toggleAttendance(student.studentId)}
-                                                className="form-checkbox h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                                            />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        {attendanceData.length === 0 && (
-                            <div className="p-6 text-center text-gray-500">No students to mark attendance for.</div>
-                        )}
-                    </div>
+    const overallWeekly = weeklyData.reduce((sum, day) => sum + day.presentPercentage, 0) / weeklyData.length;
+    const overallMonthly = monthlyData.reduce((sum, week) => sum + week.presentPercentage, 0) / monthlyData.length;
 
-                    <div className="mt-8 flex justify-end">
-                        <button
-                            onClick={saveAttendance}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline mr-2"
-                        >
-                            Save Attendance
-                        </button>
-                        <button
-                            onClick={downloadAttendancePdf}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline"
-                        >
-                            Download Attendance PDF
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
+    useEffect(() => {
+        const fetchTeacherData = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please log in first.');
+                return;
+            }
+
+            try {
+                // Fetch subjects
+                const subjectsResponse = await fetch('http://localhost:4000/api/auth/subjects', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (subjectsResponse.ok) {
+                    const subjectsData = await subjectsResponse.json();
+                    setClasses(
+                        subjectsData.subjects.map((subject, index) => ({
+                            id: index + 1,
+                            name: subject,
+                            totalStudents: 87, // Replace with actual student count if available
+                            attendanceRate: 82, // Replace with actual attendance rate if available
+                        }))
+                    );
+                } else {
+                    const errorData = await subjectsResponse.json();
+                    alert(errorData.message || 'Failed to fetch teacher data.');
+                }
+
+                // Fetch teacher profile
+                const profileResponse = await fetch('http://localhost:4000/api/auth/profile', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (profileResponse.ok) {
+                    const profileData = await profileResponse.json();
+                    setTeacherName(profileData.name || 'Teacher');
+                }
+            } catch (error) {
+                console.error('Error fetching teacher data:', error);
+                alert('An error occurred while fetching teacher data.');
+            }
+        };
+
+        fetchTeacherData();
+    }, []);
+
+    const averageAttendance =
+        classes.length > 0 ? Math.round(classes.reduce((sum, cls) => sum + cls.attendanceRate, 0) / classes.length) : 0;
+
+    const handleMarkAttendance = (className) => {
+        navigate(`/attendance/${className}`);
     };
 
     return (
         <div className="min-h-screen bg-gray-100">
-            {viewMode === 'dashboard' && renderDashboard()}
-            {viewMode === 'students' && renderStudentsView()}
-            {viewMode === 'attendance' && renderAttendanceView()}
+            <Routes>
+                <Route path="/" element={
+                    <div className="p-8">
+                        <header className="mb-8">
+                            <h2 className="text-3xl font-semibold text-gray-800">Welcome, {teacherName}!</h2>
+                            <p className="text-gray-600">Here's your teaching dashboard overview</p>
+                        </header>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            {/* Main Content - Class Cards and Stats */}
+                            <div className="lg:col-span-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {classes.map(cls => (
+                                        <div key={cls.name} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition duration-300">
+                                            <div className="p-6">
+                                                <h3 className="text-xl font-semibold text-indigo-600 mb-2">{cls.name}</h3>
+                                                <p className="text-gray-700 mb-1">
+                                                    <span className="font-semibold">Students:</span> {cls.totalStudents}
+                                                </p>
+                                                <p className="text-gray-700">
+                                                    <span className="font-semibold">Attendance:</span> {cls.attendanceRate}%
+                                                </p>
+                                                <div className="mt-4 flex justify-end space-x-2">
+                                                    <button
+                                                        onClick={() => handleMarkAttendance(cls.name)}
+                                                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                                                    >
+                                                        Attendance
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-white rounded-lg shadow-md p-6">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-3">Overall Average Attendance</h3>
+                                        <div className="text-4xl font-bold text-purple-600">{averageAttendance}%</div>
+                                        <div className="mt-4 flex space-x-2">
+                                            <button
+                                                onClick={() => setActiveStatTab('week')}
+                                                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                                    activeStatTab === 'week' ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                }`}
+                                            >
+                                                Last Week
+                                            </button>
+                                            <button
+                                                onClick={() => setActiveStatTab('month')}
+                                                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                                    activeStatTab === 'month' ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                }`}
+                                            >
+                                                Last Month
+                                            </button>
+                                        </div>
+                                        {activeStatTab === 'week' && (
+                                            <p className="text-gray-600 mt-2">
+                                                <span className="font-semibold">Avg:</span> {overallWeekly.toFixed(2)}%
+                                            </p>
+                                        )}
+                                        {activeStatTab === 'month' && (
+                                            <p className="text-gray-600 mt-2">
+                                                <span className="font-semibold">Avg:</span> {overallMonthly.toFixed(2)}%
+                                            </p>
+                                        )}
+                                    </div>
+                                    {activeStatTab === 'week' && (
+                                        <AttendanceGraph data={weeklyData} title="Weekly Attendance" dataKey="presentPercentage" color="#8884d8" />
+                                    )}
+                                    {activeStatTab === 'month' && (
+                                        <AttendanceGraph data={monthlyData} title="Monthly Attendance" dataKey="presentPercentage" color="#82ca9d" />
+                                    )}
+                                </div>
+
+                                <div className="mt-8">
+                                    <Schedule />
+                                </div>
+                            </div>
+
+                            {/* Sidebar - Recent Activity */}
+                            <div className="lg:col-span-1">
+                                <RecentActivity />
+                            </div>
+                        </div>
+                    </div>
+                } />
+                <Route path="/attendance/:className" element={<AttendancePage />} />
+            </Routes>
         </div>
     );
 };

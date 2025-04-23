@@ -10,6 +10,9 @@ import Profile from "./pages/Profile";
 import CheckAttendance from "./pages/CheckAttendance";
 import AttendanceResults from "./pages/AttendanceResults";
 import TeacherDashboard from "./components/TeacherDashboard";
+import AttendancePage from "./components/AttendancePage";
+import OcrTranscriptionPage from "./components/OCRTranscriptionPage";
+import AttendanceDetail from "./components/AttendenceDetail";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -27,6 +30,9 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/check-attendance" element={<CheckAttendance />} />
+          <Route path="/attendance/:className" element={<AttendancePage />} />
+          {/* <Route path="/ocr-transcription/:className" element={<OcrTranscriptionPage />} /> */}
+          <Route path="/attendance-detail" element={<AttendanceDetail />} /> 
 
         </Routes>
       </BrowserRouter>
