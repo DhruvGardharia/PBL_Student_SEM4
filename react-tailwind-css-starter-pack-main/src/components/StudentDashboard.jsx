@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState ,useEffect} from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Calendar from "./ui/calendar";
 import {
     Card,
@@ -150,32 +151,73 @@ const DashboardCard = ({ title, value, icon, color }) => {
 };
 
 const StudentDashboard = () => {
+   
     const navigate = useNavigate();
     const [showProfile, setShowProfile] = useState(false);
+    const [totalClasses, setTotalClasses] = useState(0);
+    const [presentClasses, setPresentClasses] = useState(0);
+    const [attendancePercentage, setAttendancePercentage] = useState(0);
+    const [attendanceData, setRecentAttendance] = useState([]);
+    const [studentData, setStudentProfile] = useState({});
+    const [selectedDate, setSelectedDate] = useState(new Date());
 
-    const studentData = {
-        name: "John Doe",
-        rollNumber: "R12345",
-        email: "john.doe@example.com",
-        course: "Computer Science",
-        semester: "4th Semester",
-        profileImage: "https://i.pravatar.cc/150?img=12"
-    };
 
-    const attendanceData = [
-        { date: "2023-09-01", status: "Present", subject: "Mathematics", time: "10:00 AM" },
-        { date: "2023-09-01", status: "Present", subject: "Physics", time: "11:30 AM" },
-        { date: "2023-09-01", status: "Present", subject: "Chemistry", time: "2:00 PM" },
-        { date: "2023-09-02", status: "Absent", subject: "Physics", time: "11:30 AM" },
-        { date: "2023-09-03", status: "Present", subject: "Computer Science", time: "9:00 AM" },
-        { date: "2023-09-04", status: "Present", subject: "Mathematics", time: "10:00 AM" },
-        { date: "2023-09-04", status: "Absent", subject: "Physics", time: "11:30 AM" },
-        { date: "2023-09-05", status: "Present", subject: "Chemistry", time: "2:00 PM" }
-    ];
+const fetchStudentData = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const roll_no = localStorage.getItem("roll_no");
 
-    const totalClasses = attendanceData.length;
-    const presentClasses = attendanceData.filter(record => record.status === "Present").length;
-    const attendancePercentage = Math.round((presentClasses / totalClasses) * 100);
+    // Fetch student profile data using the roll number
+    const studentRes = await axios.get(`http://localhost:4000/api/student/rollno/${roll_no}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    // Store student profile data
+    const studentData = studentRes.data;
+
+    // Fetch attendance stats
+    const [totalRes, presentRes] = await Promise.all([
+      axios.get(`http://localhost:4000/api/student/attendance/total/${roll_no}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      axios.get(`http://localhost:4000/api/student/attendance/present/${roll_no}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    ]);
+
+    // Fetch recent attendance (optional)
+    const recentAttendanceRes = await axios.get(`http://localhost:4000/api/student/attendance/recent/${roll_no}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    console.log("Student Data:", studentData);
+    console.log("Total Classes:", totalRes.data.totalClasses);
+    console.log("Present Classes:", presentRes.data.presentCount);
+    console.log("Recent Attendance:", recentAttendanceRes.data);
+
+    // Calculate attendance percentage
+    const percentage = Math.round((presentRes.data.presentCount / totalRes.data.totalClasses) * 100);
+    console.log("Calculated Attendance Percentage:", percentage);
+
+    // Store the data in your state or wherever needed
+    setStudentProfile(studentData);
+    setTotalClasses(totalRes.data.totalClasses);
+    setPresentClasses(presentRes.data.presentCount);
+    setAttendancePercentage(percentage);
+    setRecentAttendance(recentAttendanceRes.data);
+
+  } catch (error) {
+    console.error("Error fetching student data and attendance:", error);
+  }
+};
+
+// React state for storing data
+
+
+// UseEffect to call fetchStudentData once component mounts
+useEffect(() => {
+  fetchStudentData();
+}, []);
 
     const handleLogout = () => {
         navigate('/');
@@ -189,9 +231,58 @@ const StudentDashboard = () => {
         setShowProfile(false);
     };
 
+    // const handleCheckAttendance = () => {
+    //     navigate('/check-attendance');
+    // };
+    // const handleCheckAttendance = async () => {
+    //     try {
+    //         const token = localStorage.getItem("token");
+    //         const roll_no = localStorage.getItem("roll_no");
+    
+    //         console.log("Selected Date:", selectedDate);
+
+            
+    
+    //         const res = await axios.get(
+    //             `http://localhost:4000/api/student/attendance/by-date/${roll_no}`,
+    //             {
+    //                 params: {
+    //                     date: selectedDate, // Pass date as a query parameter
+    //                 },
+    //                 headers: {
+    //                     Authorization: `Bearer ${token}`,
+    //                 },
+    //             }
+    //         );
+    
+    //         console.log("Filtered attendance:", res.data);
+    //         setRecentAttendance(res.data); // Update state
+    //     } catch (error) {
+    //         console.error("Error fetching attendance by date:", error);
+    //     }
+    // };
+    
+    
+    // Assuming this is inside your handleCheckAttendance function
     const handleCheckAttendance = () => {
-        navigate('/check-attendance');
-    };
+        const studentId = 23241;
+        const date = "2025-04-11";
+        const token = localStorage.getItem('token');  // Or wherever you're storing the token
+      
+        axios.get(`http://localhost:4000/api/student/attendance/by-date/${studentId}?date=${date}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        .then(response => {
+          console.log(response.data);
+        })
+        .catch(error => {
+          console.error("Error fetching attendance by date:", error);
+        });
+      };
+      
+  
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-6">
@@ -264,7 +355,7 @@ const StudentDashboard = () => {
                             icon={<Clock className="h-6 w-6" />}
                             color="border-blue-600"
                         />
-                        <Card className="md:col-span-2 bg-white shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 rounded-xl">
+                        {/* <Card className="md:col-span-2 bg-white shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 rounded-xl">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-gray-800 font-semibold">
                                     <CalendarDays className="h-5 w-5 text-indigo-600" />
@@ -280,7 +371,37 @@ const StudentDashboard = () => {
                                     Check Attendance by Date
                                 </Button>
                             </CardContent>
-                        </Card>
+                        </Card> */}
+
+
+<Card className="md:col-span-2 bg-white shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 rounded-xl">
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2 text-gray-800 font-semibold">
+      <CalendarDays className="h-5 w-5 text-indigo-600" />
+      Check Attendance
+    </CardTitle>
+    <CardDescription className="text-gray-500">
+      View attendance by date.
+    </CardDescription>
+  </CardHeader>
+  <CardContent className="p-4">
+    {/* 🔽 Add this input for date selection */}
+    <input
+      type="date"
+      className="border rounded px-3 py-2 w-full mb-4"
+      value={selectedDate}
+      onChange={(e) => setSelectedDate(e.target.value)}
+    />
+
+    <Button
+      className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white transition-all duration-300"
+      onClick={handleCheckAttendance}
+    >
+      Check Attendance by Date
+    </Button>
+  </CardContent>
+</Card>
+
                     </div>
                 </div>
 
@@ -301,26 +422,33 @@ const StudentDashboard = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {attendanceData.slice(0, 5).map((record, index) => (
-                                        <TableRow key={index} className="hover:bg-gray-50 transition-colors">
-                                            <TableCell className="px-4 py-3 font-medium">{new Date(record.date).toLocaleDateString('en-US', {
-                                                month: 'short',
-                                                day: 'numeric'
-                                            })}</TableCell>
-                                            <TableCell className="px-4 py-3">{record.subject}</TableCell>
-                                            <TableCell className="px-4 py-3">{record.time}</TableCell>
-                                            <TableCell className="px-4 py-3">
-                                                <Badge variant={record.status === 'Present' ? 'outline' : 'destructive'}
-                                                    className={`hover:scale-105 transition-transform ${
-                                                        record.status === 'Present'
-                                                            ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                                                            : ''
-                                                    }`}>
-                                                    {record.status}
-                                                </Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+
+{Array.isArray(attendanceData.recentAttendance) &&
+  attendanceData.recentAttendance.slice(0, 5).map((record, index) => (
+    <TableRow key={index} className="hover:bg-gray-50 transition-colors">
+      <TableCell className="px-4 py-3 font-medium">
+        {new Date(record.date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })}
+      </TableCell>
+      <TableCell className="px-4 py-3">{record.subject}</TableCell>
+      <TableCell className="px-4 py-3">{record.time}</TableCell>
+      <TableCell className="px-4 py-3">
+        <Badge
+          variant={record.status === 'Present' ? 'outline' : 'destructive'}
+          className={`hover:scale-105 transition-transform ${
+            record.status === 'Present'
+              ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+              : ''
+          }`}
+        >
+          {record.status}
+        </Badge>
+      </TableCell>
+    </TableRow>
+))}
+
                                 </TableBody>
                             </Table>
                         </div>
@@ -338,4 +466,9 @@ const StudentDashboard = () => {
     );
 };
 
+  
+
 export default StudentDashboard;
+
+
+
