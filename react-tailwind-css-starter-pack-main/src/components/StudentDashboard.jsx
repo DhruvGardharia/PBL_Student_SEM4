@@ -1,4 +1,4 @@
-import React, { useState ,useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Calendar from "./ui/calendar";
@@ -157,10 +157,11 @@ const StudentDashboard = () => {
     const [totalClasses, setTotalClasses] = useState(0);
     const [presentClasses, setPresentClasses] = useState(0);
     const [attendancePercentage, setAttendancePercentage] = useState(0);
-    const [attendanceData, setRecentAttendance] = useState([]);
+    const [recentAttendance, setRecentAttendance] = useState([]);
     const [studentData, setStudentProfile] = useState({});
-    const [selectedDate, setSelectedDate] = useState(new Date());
-
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [dateAttendanceData, setDateAttendanceData] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
 
 const fetchStudentData = async () => {
   try {
@@ -186,7 +187,8 @@ const fetchStudentData = async () => {
     ]);
 
     // Fetch recent attendance (optional)
-    const recentAttendanceRes = await axios.get(`http://localhost:4000/api/student/attendance/recent/${roll_no}`, {
+    console.log(roll_no);
+    const recentAttendanceRes = await axios.get(`http://localhost:4000/api/student/attendance/recent/roll_no`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
@@ -196,7 +198,9 @@ const fetchStudentData = async () => {
     console.log("Recent Attendance:", recentAttendanceRes.data);
 
     // Calculate attendance percentage
-    const percentage = Math.round((presentRes.data.presentCount / totalRes.data.totalClasses) * 100);
+    const percentage = totalRes.data.totalClasses > 0 
+      ? Math.round((presentRes.data.presentCount / totalRes.data.totalClasses) * 100) 
+      : 0;
     console.log("Calculated Attendance Percentage:", percentage);
 
     // Store the data in your state or wherever needed
@@ -204,15 +208,13 @@ const fetchStudentData = async () => {
     setTotalClasses(totalRes.data.totalClasses);
     setPresentClasses(presentRes.data.presentCount);
     setAttendancePercentage(percentage);
-    setRecentAttendance(recentAttendanceRes.data);
+    setRecentAttendance(recentAttendanceRes.data.recentAttendance || []);
+    console.log(recentAttendance);
 
   } catch (error) {
     console.error("Error fetching student data and attendance:", error);
   }
 };
-
-// React state for storing data
-
 
 // UseEffect to call fetchStudentData once component mounts
 useEffect(() => {
@@ -220,6 +222,8 @@ useEffect(() => {
 }, []);
 
     const handleLogout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("roll_no");
         navigate('/');
     };
 
@@ -231,58 +235,42 @@ useEffect(() => {
         setShowProfile(false);
     };
 
-    // const handleCheckAttendance = () => {
-    //     navigate('/check-attendance');
-    // };
-    // const handleCheckAttendance = async () => {
-    //     try {
-    //         const token = localStorage.getItem("token");
-    //         const roll_no = localStorage.getItem("roll_no");
+    const handleCheckAttendance = async () => {
+        try {
+            setIsLoading(true);
+            const token = localStorage.getItem("token");
+            const roll_no = localStorage.getItem("roll_no");
     
-    //         console.log("Selected Date:", selectedDate);
-
+            console.log("Selected Date:", selectedDate);
             
+            // Format date if needed (selected date should be in YYYY-MM-DD format)
+            // If your API expects a different format, convert it here
+            
+            const res = await axios.get(
+                `http://localhost:4000/api/student/attendance/by-date`,
+                {
+                    params: {
+                        
+                        date: selectedDate
+                    },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
     
-    //         const res = await axios.get(
-    //             `http://localhost:4000/api/student/attendance/by-date/${roll_no}`,
-    //             {
-    //                 params: {
-    //                     date: selectedDate, // Pass date as a query parameter
-    //                 },
-    //                 headers: {
-    //                     Authorization: `Bearer ${token}`,
-    //                 },
-    //             }
-    //         );
-    
-    //         console.log("Filtered attendance:", res.data);
-    //         setRecentAttendance(res.data); // Update state
-    //     } catch (error) {
-    //         console.error("Error fetching attendance by date:", error);
-    //     }
-    // };
-    
-    
-    // Assuming this is inside your handleCheckAttendance function
-    const handleCheckAttendance = () => {
-        const studentId = 23241;
-        const date = "2025-04-11";
-        const token = localStorage.getItem('token');  // Or wherever you're storing the token
-      
-        axios.get(`http://localhost:4000/api/student/attendance/by-date/${studentId}?date=${date}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        .then(response => {
-          console.log(response.data);
-        })
-        .catch(error => {
-          console.error("Error fetching attendance by date:", error);
-        });
-      };
-      
-  
+            console.log("Filtered attendance:", res.data);
+            
+            setRecentAttendance(res.data.recentAttendance||[]);
+            
+            
+        } catch (error) {
+            console.error("Error fetching attendance by date:", error);
+            setDateAttendanceData([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-6">
@@ -305,11 +293,11 @@ useEffect(() => {
                             onClick={handleViewProfile}
                         >
                             <img
-                                src={studentData.profileImage}
-                                alt={studentData.name}
+                                src={studentData.profileImage || "/api/placeholder/32/32"}
+                                alt={studentData.name || "Profile"}
                                 className="h-8 w-8 rounded-full border border-gray-200 object-cover"
                             />
-                            <span className="font-medium">{studentData.name}</span>
+                            <span className="font-medium">{studentData.name || "Student"}</span>
                         </Button>
                         <Button
                             variant="outline"
@@ -355,53 +343,64 @@ useEffect(() => {
                             icon={<Clock className="h-6 w-6" />}
                             color="border-blue-600"
                         />
-                        {/* <Card className="md:col-span-2 bg-white shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 rounded-xl">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-gray-800 font-semibold">
-                                    <CalendarDays className="h-5 w-5 text-indigo-600" />
-                                    Check Attendance
-                                </CardTitle>
-                                <CardDescription className="text-gray-500">View attendance by date.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-4">
-                                <Button
-                                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white transition-all duration-300"
-                                    onClick={handleCheckAttendance}
-                                >
-                                    Check Attendance by Date
-                                </Button>
-                            </CardContent>
-                        </Card> */}
 
+                        <Card className="md:col-span-2 bg-white shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 rounded-xl">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-gray-800 font-semibold">
+                              <CalendarDays className="h-5 w-5 text-indigo-600" />
+                              Check Attendance
+                            </CardTitle>
+                            <CardDescription className="text-gray-500">
+                              View attendance by date.
+                            </CardDescription>
+                          </CardHeader>
 
-<Card className="md:col-span-2 bg-white shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 rounded-xl">
-  <CardHeader>
-    <CardTitle className="flex items-center gap-2 text-gray-800 font-semibold">
-      <CalendarDays className="h-5 w-5 text-indigo-600" />
-      Check Attendance
-    </CardTitle>
-    <CardDescription className="text-gray-500">
-      View attendance by date.
-    </CardDescription>
-  </CardHeader>
-  <CardContent className="p-4">
-    {/* 🔽 Add this input for date selection */}
-    <input
-      type="date"
-      className="border rounded px-3 py-2 w-full mb-4"
-      value={selectedDate}
-      onChange={(e) => setSelectedDate(e.target.value)}
-    />
+                          <CardContent className="p-4">
+                            {/* Date input */}
+                            <input
+                              type="date"
+                              className="border rounded px-3 py-2 w-full mb-4"
+                              value={selectedDate}
+                              onChange={(e) => setSelectedDate(e.target.value)}
+                            />
 
-    <Button
-      className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white transition-all duration-300"
-      onClick={handleCheckAttendance}
-    >
-      Check Attendance by Date
-    </Button>
-  </CardContent>
-</Card>
+                            {/* Check Attendance Button */}
+                            <Button
+                              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white transition-all duration-300"
+                              onClick={handleCheckAttendance}
+                              disabled={isLoading}
+                            >
+                              {isLoading ? "Loading..." : "Check Attendance by Date"}
+                            </Button>
 
+                            {/* Render Attendance Results */}
+                            <div className="mt-4">
+                              {dateAttendanceData.length > 0 ? (
+                                <ul className="space-y-2">
+                                  {dateAttendanceData.map((entry, index) => (
+                                    <li
+                                      key={index}
+                                      className="p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm text-sm"
+                                    >
+                                      <p><strong>Subject:</strong> {entry.subject}</p>
+                                      <p>
+                                        <strong>Status:</strong> 
+                                        <span className={entry.status === 'Present' ? 'text-green-600' : 'text-red-600'}>
+                                          {entry.status}
+                                        </span>
+                                      </p>
+                                      <p><strong>Time:</strong> {entry.time}</p>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-sm text-gray-500 mt-2 text-center py-2">
+                                  {isLoading ? "Loading attendance data..." : "No attendance found for selected date."}
+                                </p>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
                     </div>
                 </div>
 
@@ -422,33 +421,38 @@ useEffect(() => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-
-{Array.isArray(attendanceData.recentAttendance) &&
-  attendanceData.recentAttendance.slice(0, 5).map((record, index) => (
-    <TableRow key={index} className="hover:bg-gray-50 transition-colors">
-      <TableCell className="px-4 py-3 font-medium">
-        {new Date(record.date).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        })}
-      </TableCell>
-      <TableCell className="px-4 py-3">{record.subject}</TableCell>
-      <TableCell className="px-4 py-3">{record.time}</TableCell>
-      <TableCell className="px-4 py-3">
-        <Badge
-          variant={record.status === 'Present' ? 'outline' : 'destructive'}
-          className={`hover:scale-105 transition-transform ${
-            record.status === 'Present'
-              ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-              : ''
-          }`}
-        >
-          {record.status}
-        </Badge>
-      </TableCell>
-    </TableRow>
-))}
-
+                                  {Array.isArray(recentAttendance) && recentAttendance.length > 0 ? (
+                                    recentAttendance.map((record, index) => (
+                                      <TableRow key={index} className="hover:bg-gray-50 transition-colors">
+                                        <TableCell className="px-4 py-3 font-medium">
+                                          {new Date(record.date).toLocaleDateString('en-US', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                          })}
+                                        </TableCell>
+                                        <TableCell className="px-4 py-3">{record.subject}</TableCell>
+                                        <TableCell className="px-4 py-3">{record.time}</TableCell>
+                                        <TableCell className="px-4 py-3">
+                                          <Badge
+                                            variant={record.status === 'Present' ? 'outline' : 'destructive'}
+                                            className={`hover:scale-105 transition-transform ${
+                                              record.status === 'Present'
+                                                ? 'bg-green-500 text-green-700 border-green-200 hover:bg-green-100'
+                                                : 'bg-red-500 text-red-700 border-red-200 hover:bg-red-100'
+                                            }`}
+                                          >
+                                            {record.status}
+                                          </Badge>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))
+                                  ) : (
+                                    <TableRow>
+                                      <TableCell colSpan={4} className="text-center py-4 text-gray-500">
+                                        No recent attendance records found.
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
                                 </TableBody>
                             </Table>
                         </div>
@@ -466,9 +470,4 @@ useEffect(() => {
     );
 };
 
-  
-
 export default StudentDashboard;
-
-
-

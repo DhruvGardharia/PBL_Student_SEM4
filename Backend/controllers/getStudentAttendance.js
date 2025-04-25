@@ -44,7 +44,7 @@ const Student = require("../models/Student"); // Adjust path as needed
 
 exports.getAttendanceByDate = async (req, res) => {
     try {
-        const { roll_no } = req.params;
+        const  roll_no  = req.student.roll_no;
         const { date } = req.query;
 
         if (!date) {
@@ -79,9 +79,8 @@ exports.getAttendanceByDate = async (req, res) => {
         }));
 
         res.status(200).json({
-            roll_no,
-            date: formattedDate,
-            attendance: formatted
+            roll_no: roll_no,
+            recentAttendance: formatted
         });
     } catch (error) {
         console.error(error);
@@ -155,10 +154,9 @@ exports.getStudentByRollNo = async (req, res) => {
 // Get top 5 recent attendance records for a student by roll_no
 exports.getRecentAttendanceByRollNo = async (req, res) => {
 
-    console.log("📅 Get attendance for date:", req.body.date);
-  console.log("🎓 Roll No:", req.params.roll_no);
+  console.log("🎓 Roll No:", req.student.roll_no);
     try {
-        const student = await Student.findOne({ roll_no: req.params.roll_no });
+        const student = await Student.findOne({ roll_no: req.student.roll_no });
 
         if (!student) return res.status(404).json({ message: "Student not found" });
 

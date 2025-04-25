@@ -57,7 +57,7 @@ module.exports = (req, res, next) => {
         }
 
         req.student = verified; // Attach student data to request
-        console.log("Student data added to request:", req.student); // Debugging log
+        
         next();
     } catch (error) {
         console.error("JWT Verification Error:", error);

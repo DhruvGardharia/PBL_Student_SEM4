@@ -403,13 +403,21 @@ const HeroSection = () => {
     }
 
     try {
+      console.log('Form Data:', formData);
+      console.log('Endpoint:', endpoint); // Debugging line
+      console.log('User Type:', userType); // Debugging line
+      console.log('Active Tab:', activeTab); 
+       // Debugging line
       if (activeTab === 'login') {
         const response = await axios.post(endpoint, {
           email: formData.email,
           password: formData.password
         });
+        console.log('Login Response:', response.data); // Debugging line
 
         localStorage.setItem('token', response.data.token);
+        if(userType=='student')
+          localStorage.setItem('roll_no', response.data.student.roll_no); // Store user type in local storage
         document.cookie = `token=${response.data.token}; path=/; max-age=3600;`;
 
         if (userType === 'student') navigate('/student-dashboard');

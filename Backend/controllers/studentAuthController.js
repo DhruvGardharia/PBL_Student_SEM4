@@ -44,7 +44,14 @@ exports.loginStudent = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    res.json({ message: "Login successful", token });
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false, // set to true in production with HTTPS
+      sameSite: "Lax", // "None" if frontend and backend are on different domains and using HTTPS
+      maxAge: 36000000, // 1 hour
+    });
+
+    res.json({ message: "Login successful", token, student});
   } catch (error) {
     res.status(500).json({ message: "Error logging in", error });
   }

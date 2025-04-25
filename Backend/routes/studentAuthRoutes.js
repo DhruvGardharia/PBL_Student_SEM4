@@ -4,7 +4,7 @@ const {getAttendanceByDate ,getRecentAttendanceByRollNo,getStudentByRollNo,getPr
 const authStudent = require("../middleware/authStudent"); 
 const router = express.Router();
 
-router.get("/attendance/by-date/:roll_no", authStudent, getAttendanceByDate);
+router.get("/attendance/by-date", authStudent, getAttendanceByDate);
 
 router.get("/attendance/present/:roll_no",authStudent, getPresentCount);
 router.post("/register", registerStudent);
@@ -14,6 +14,6 @@ router.post("/login", loginStudent);
 router.get("/attendance/total/:roll_no", authStudent, getTotalClasses);
 // router.get("/student/present-classes", authStudent, getPresentClasses);
 // router.get("/attendance-percentage",authStudent,getAttendancePercentage);
-router.get("/attendance/recent/:roll_no", authStudent,getRecentAttendanceByRollNo);
+router.get("/attendance/recent/roll_no",authStudent,getRecentAttendanceByRollNo);
 router.get("/rollno/:roll_no",authStudent,getStudentByRollNo);
 module.exports = router;
