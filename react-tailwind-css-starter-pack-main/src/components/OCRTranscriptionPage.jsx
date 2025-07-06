@@ -138,6 +138,7 @@ const OcrTranscriptionPage = () => {
             });
 
             const data = await response.json();
+            console.log(data);
             if (response.ok && data && data.transcript) {
                 setTranscriptionText(data.transcript);
                 const transcribedText = data.transcript.toLowerCase();

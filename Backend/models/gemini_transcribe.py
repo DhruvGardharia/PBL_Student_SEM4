@@ -22,8 +22,8 @@ def transcribe_with_gemini(audio_path, api_key):
             audio_base64 = base64.b64encode(f.read()).decode("utf-8")
 
         prompt = (
-            "This is an audio file in WAV format. "
-            "Transcribe the speech as accurately as possible."
+             "This is an audio file in WAV format. "
+            "Transcribe the speech and provide a concise summary of the main points discussed."
         )
 
         model = genai.GenerativeModel(model_name="models/gemini-1.5-pro-latest")
