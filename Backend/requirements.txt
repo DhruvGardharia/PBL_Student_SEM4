@@ -2,4 +2,4 @@ speechrecognition
 pytesseract
 opencv-python
 numpy
-pyaudio
+
