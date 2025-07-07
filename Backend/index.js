@@ -90,8 +90,24 @@ app.use("/api/student", studentAuthRoutes);
 app.use("/api/ocr", ocrRoutes);
 app.use("/api", geminiTranscribeRoute);
 app.use("/api", headCountRoute);
-// app.use("/api/attendance", attendenceRoute); // Attendance routes
+// app.use("/api/attendance", attendenceRoute); // Attendance routes4
 
+// const __dirname = path.resolve();
+
+// app.use(express.static(path.join(__dirname, "/frontend/dist")));
+
+// app.get("*", (req, res) => {
+//   res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
+// });
+
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'client/build')));
+
+// All other GET requests not handled will return React's index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+});
 
 // Start server
 app.listen(PORT, () => {
