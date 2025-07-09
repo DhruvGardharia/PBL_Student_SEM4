@@ -101,12 +101,12 @@ app.use("/api", headCountRoute);
 // });
 
 
-app.use(express.static(path.join(__dirname, 'client/react-tailwind-css-starter-pack/build')));
+app.use(express.static(path.join(__dirname, "client", "react-tailwind-css-starter-pack", "build")));
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/react-tailwind-css-starter-pack/build', 'index.html'));
+// All other GET requests not handled by API will return React's index.html
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "client", "react-tailwind-css-starter-pack", "build", "index.html"));
 });
-
 
 // Start server
 app.listen(PORT, () => {
