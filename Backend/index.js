@@ -64,12 +64,25 @@ const headCountRoute = require("./routes/headCountRoute");
 require("./config/database").connect();
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://pbl-student-sem4-15.onrender.com'
+];
+
 const corsOptions = {
-  origin: 'https://pbl-student-sem4-15.onrender.com', // ✅ Your deployed frontend domain
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // ✅ Add other needed HTTP methods
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
+
+app.use(cors(corsOptions));
 
 app.use(cors(corsOptions));
 app.use(express.json());
