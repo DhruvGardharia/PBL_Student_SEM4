@@ -101,7 +101,7 @@ const TeacherDashboard = () => {
 
             try {
                 // Fetch subjects
-                const subjectsResponse = await fetch('http://localhost:4000/api/auth/subjects', {
+                const subjectsResponse = await fetch('https://pbl-student-sem4-12.onrender.com/api/auth/subjects', {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
@@ -123,7 +123,7 @@ const TeacherDashboard = () => {
                 }
 
                 // Fetch teacher profile
-                const profileResponse = await fetch('http://localhost:4000/api/auth/profile', {
+                const profileResponse = await fetch('https://pbl-student-sem4-12.onrender.com/api/auth/profile', {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },

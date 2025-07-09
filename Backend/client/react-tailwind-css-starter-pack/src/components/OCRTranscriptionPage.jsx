@@ -46,7 +46,7 @@ const OcrTranscriptionPage = () => {
         formData.append('image', classImage);
 
         try {
-            const response = await fetch('http://localhost:4000/api/ocr/image', {
+            const response = await fetch('https://pbl-student-sem4-12.onrender.com/api/ocr/image', {
                 method: 'POST',
                 body: formData,
             });
@@ -132,7 +132,7 @@ const OcrTranscriptionPage = () => {
         formData.append('audio', audioFile);
 
         try {
-            const response = await fetch('http://localhost:4000/api/gemini-transcribe', {
+            const response = await fetch('https://pbl-student-sem4-12.onrender.com/api/gemini-transcribe', {
                 method: 'POST',
                 body: formData,
             });

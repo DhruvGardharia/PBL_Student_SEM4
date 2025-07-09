@@ -23,7 +23,7 @@ const RecentActivity = () => {
                 }
 
                 // Fetch recent attendance records
-                const response = await fetch('http://localhost:4000/api/auth/recent', {
+                const response = await fetch('https://pbl-student-sem4-12.onrender.com/api/auth/recent', {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
@@ -37,7 +37,7 @@ const RecentActivity = () => {
                 setRecentAttendance(data.recentAttendance);
 
                 // Fetch attendance statistics
-                const statsResponse = await fetch('http://localhost:4000/api/auth/stats', {
+                const statsResponse = await fetch('https://pbl-student-sem4-12.onrender.com/api/auth/stats', {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }

@@ -84,7 +84,7 @@ const AttendancePage = () => {
         // setIsLoading(true); // You might want a specific loading state for OCR
 
         try {
-            const response = await fetch('http://localhost:4000/api/ocr/image', {
+            const response = await fetch('https://pbl-student-sem4-12.onrender.com/api/ocr/image', {
                 method: 'POST',
                 body: formData,
             });
@@ -153,7 +153,7 @@ const AttendancePage = () => {
         formData.append('audio', audioFile);
 
         try {
-            const response = await fetch('http://localhost:4000/api/gemini-transcribe', {
+            const response = await fetch('https://pbl-student-sem4-12.onrender.com/api/gemini-transcribe', {
                 method: 'POST',
                 body: formData,
             });
@@ -257,7 +257,7 @@ const AttendancePage = () => {
         formData.append('image', headCountImage);
 
         try {
-            const response = await fetch('http://localhost:4000/api/headcount', {
+            const response = await fetch('https://pbl-student-sem4-12.onrender.com/api/headcount', {
                 method: 'POST',
                 body: formData,
             });
@@ -336,7 +336,7 @@ const AttendancePage = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:4000/api/auth/mark', {
+            const response = await fetch('https://pbl-student-sem4-12.onrender.com/api/auth/mark', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -379,7 +379,7 @@ const AttendancePage = () => {
                 setIsLoading(false);
                 return;
             }
-            const response = await fetch(`http://localhost:4000/api/attendance/${encodeURIComponent(className)}/${encodeURIComponent(attendanceDate)}`);
+            const response = await fetch(`https://pbl-student-sem4-12.onrender.com/api/attendance/${encodeURIComponent(className)}/${encodeURIComponent(attendanceDate)}`);
 
              if (response.status === 404) {
                 alert(`No attendance record found for ${className} on ${new Date(attendanceDate).toLocaleDateString()}.`);

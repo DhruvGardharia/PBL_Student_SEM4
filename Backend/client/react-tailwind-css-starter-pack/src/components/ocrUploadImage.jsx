@@ -20,7 +20,7 @@ const OcrUploadImage = () => {
     formData.append('image', image);
 
     try {
-      const response = await axios.post('http://localhost:4000/api/ocr/image', formData, {
+      const response = await axios.post('https://pbl-student-sem4-12.onrender.com/api/ocr/image', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -40,7 +40,7 @@ const OcrUploadImage = () => {
       {uploadedImage && (
         <div>
           <h3>Uploaded Image:</h3>
-          <img src={`http://localhost:4000/uploads/${uploadedImage}`} alt="Uploaded" />
+          <img src={`https://pbl-student-sem4-12.onrender.com/uploads/${uploadedImage}`} alt="Uploaded" />
         </div>
       )}
 

@@ -31,7 +31,7 @@ const AttendanceDetail = () => {
 
                 // Option 1: API directly provides absent roll numbers
                 const response = await fetch(
-                    `http://localhost:4000/api/auth/absentees?subject=${encodeURIComponent(record.subject)}&date=${encodeURIComponent(record.date)}&time=${encodeURIComponent(record.time)}`,
+                    `https://pbl-student-sem4-12.onrender.com/api/auth/absentees?subject=${encodeURIComponent(record.subject)}&date=${encodeURIComponent(record.date)}&time=${encodeURIComponent(record.time)}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
