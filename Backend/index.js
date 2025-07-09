@@ -65,11 +65,12 @@ require("./config/database").connect();
 
 // Middleware
 const corsOptions = {
-  origin: 'http://localhost:3000', // Allow only your frontend origin
-  methods: 'POST, OPTIONS', // Specify the allowed HTTP methods for this route
-  allowedHeaders: ['Content-Type','Authorization'], // Specify the allowed headers
-  credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+  origin: 'https://pbl-student-sem4-15.onrender.com', // ✅ Your deployed frontend domain
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // ✅ Add other needed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 };
+
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
