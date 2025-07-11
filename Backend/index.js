@@ -64,7 +64,7 @@ const headCountRoute = require("./routes/headCountRoute");
 require("./config/database").connect();
 
 // Middleware
-const cors = require('cors');
+
 
 const allowedOrigins = [
   'http://localhost:3000',
