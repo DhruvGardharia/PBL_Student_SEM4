@@ -20,7 +20,7 @@ const allowedOrigins = [
 const corsOptions = {
   origin: function (origin, callback) {
     console.log("Request from origin:", origin);
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins[0].includes(origin)) {
       callback(null, true);
     } else {
       console.error("Blocked by CORS:", origin);
@@ -73,4 +73,5 @@ app.get("/api/ping", (req, res) => {
 // ✅ Start the Server
 app.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);
+  console.log(allowedOrigins[0]);
 });
