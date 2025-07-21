@@ -33,7 +33,7 @@ const HeroSection = () => {
     if (userType === 'student' && activeTab === 'signup') {
       endpoint = 'https://pbl-student-sem4-12.onrender.com/api/student/register';
     } else if (userType === 'student' && activeTab === 'login') {
-      endpoint = 'https://pbl-student-sem4-12.onrender.com/api/student/login';
+      endpoint = 'http://localhost:3000/api/student/login';
     } else if (userType === 'teacher' && activeTab === 'signup') {
       endpoint = 'https://pbl-student-sem4-12.onrender.com/api/auth/register'; // Update if different
     } else if (userType === 'teacher' && activeTab === 'login') {

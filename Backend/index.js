@@ -13,28 +13,37 @@ const PORT = process.env.PORT || 4000;
 require("./config/database").connect();
 
 // ✅ CORS Setup (Allow only deployed frontend)
-const allowedOrigins = [
-  'https://pbl-student-sem4-15.onrender.com'
-];
+// const allowedOrigins = [
+//   'https://pbl-student-sem4-15.onrender.com'
+// ];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    console.log("Request from origin:", origin);
-    if (!origin || allowedOrigins[0].includes(origin)) {
-      callback(null, true);
-    } else {
-      console.error("Blocked by CORS:", origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     console.log("Request from origin:", origin);
+//     if (!origin || allowedOrigins[0].includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       console.error("Blocked by CORS:", origin);
+//       callback(new Error('Not allowed by CORS'));
+//     }
+//   },
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization'],
+//   credentials: true
+// };
+
+// // ✅ Apply CORS Middleware at top
+// app.use(cors(corsOptions));
+// app.options('*', cors(corsOptions));
+
+
+app.use(cors({
+  origin: 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
-};
+}));
 
-// ✅ Apply CORS Middleware at top
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
 // ✅ General Middlewares
 app.use(express.json());
@@ -73,5 +82,5 @@ app.get("/api/ping", (req, res) => {
 // ✅ Start the Server
 app.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);
-  console.log(allowedOrigins[0]);
+  // console.log([0]);
 });
